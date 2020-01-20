@@ -40,6 +40,11 @@ void setup()
 	//Data_Carent[5] = 333;
 	//delay(1000);
 
+
+	for (byte i = 0; i < size_data; i++)
+	{
+		buffer[i] = 0;
+	}
 	
 
 	Init_All_INA219();
@@ -94,6 +99,10 @@ void setup()
 long time_p1 = 0;
 bool flag_napravlen = 0;
 int gradus = 0;
+long t_led_ok = millis();
+long t_led_er = millis();
+
+long time_data = millis();
 
 // the loop function runs over and over again until power down or reset
 void loop() 
@@ -105,7 +114,9 @@ void loop()
 		//По флагу переписываем данные из буфера приема в массив данных, откуда потом их переаем в плату PCA9685
 		if (flag_data == true)
 		{
-			//Serial.print("Data Ready...");		Serial.println(millis());
+
+			//Serial.print("Data Ready...");		Serial.println(millis()- time_data);
+			time_data = millis();
 			for (byte i = 0; i < size_servo; i++)
 			{
 				set_num_servo_angle(i, Data_Angle[i]);
@@ -115,8 +126,17 @@ void loop()
 		//По таймеру передаем данные в плату сервомоторов левую и правую 
 		if (flag_9685 == true)
 		{
-			loop_writeAngle_to_PCA9685();
+			loop_writeAngle_to_PCA9685();			//Тут закоментить и не будут работать сервы и мешать
 			flag_9685 = false;
+		}
+
+		if (millis() - t_led_ok > 9)				  //Гасим светодиод если прошло 9 милисекунд с момента как включили
+		{
+			set_Led_OFF_9685(PCA9685_LEFT_ADDRESS, 13);
+		}
+		if (millis() - t_led_er > 9)				  //Гасим светодиод если прошло 9 милисекунд с момента как включили
+		{
+			set_Led_OFF_9685(PCA9685_LEFT_ADDRESS, 15);
 		}
 
 		if (flag_goodCommand == true)
@@ -126,19 +146,25 @@ void loop()
 		}
 		if (flag_bedCommand == true)
 		{
-			Serial.print(" ErrorC ");
+			//Serial.print(" ErrorC ");
 			flag_bedCommand = false;
 		}
 		if (flag_goodData == true)
 		{
-			Serial.print(" OkD ");
+			//Serial.print(" OkD ");
+			set_Led_ON_9685(PCA9685_LEFT_ADDRESS, 13);
+			t_led_ok = millis();
 			flag_goodData = false;
 		}
 		if (flag_bedData == true)
 		{
 			Serial.print(" ErrorD ");
+			set_Led_ON_9685(PCA9685_LEFT_ADDRESS, 15);
+			t_led_er = millis();
+
 			flag_bedData = false;
 		}
+
 
 
 		if (flag_data == 1)
@@ -232,7 +258,10 @@ void loop()
 			}
 			Serial.print(Data_Angle[0]); Serial.print(" ");
 			Serial.print(Data_Angle[1]); Serial.print(" ");
-			Serial.println(Data_Angle[2]);
+			Serial.print(Data_Angle[2]); Serial.print(" ");
+			Serial.print(Data_Angle[3]); Serial.print(" ");
+			Serial.print(Data_Angle[4]); Serial.print(" ");
+			Serial.println(Data_Angle[5]);
 
 			time_p1 = millis();
 		}

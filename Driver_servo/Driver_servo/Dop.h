@@ -171,9 +171,9 @@ void Init_SPI_slave()
 	// have to send on master in, *slave out*
 	pinMode(MISO, OUTPUT);
 	// have to send on master in, *slave out*
-	//pinMode(MOSI, INPUT);
+	pinMode(MOSI, INPUT_PULLUP);
 
-	//pinMode(SS, INPUT_PULLUP);  // Чип селект на вход сигнала
+	pinMode(SS, INPUT_PULLUP);  // Чип селект на вход сигнала
 	// turn on SPI in slave mode
 	SPCR |= 1 << (SPE);
 	// turn on interrupts

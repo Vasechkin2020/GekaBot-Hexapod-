@@ -6,8 +6,8 @@
 #define SERVO_TAKT ((float)1000000/SERVO_FREQ/4096.0) // кол-во микросекунд которое требуется подавать сигнал на 1 имульс драйвера. Зависит от частоты сигнала и разрешающей способности платы управления
 // или сколько микросекунд в одном такте платы . И если нам надо подать управляющий сигнал в 1500 микросекунд то надо 1500/	SERVO_TAKT 
 
-#define PCA9685_LEFT_ADDRESS  0x43      /**< Default PCA9685 I2C Slave Address */
-#define PCA9685_RIGHT_ADDRESS 0x41      /**<  PCA9685 I2C Slave Address */
+#define PCA9685_LEFT_ADDRESS  0x41      /**< Default PCA9685 I2C Slave Address */
+#define PCA9685_RIGHT_ADDRESS 0x43      /**<  PCA9685 I2C Slave Address */
 
 #define PCA9685_MODE1 0x00      /**< Mode Register 1 */
 #define MODE1_RESTART 0x80 /**< Restart enabled */
@@ -113,7 +113,7 @@ void set_Led_ON_9685(byte _addr, byte _port)
 	Wire.write(0);
 	Wire.write(0);
 	Wire.endTransmission();
-	Serial.println("UP+");
+	//Serial.println("UP+");
 }
 void set_Led_OFF_9685(byte _addr, byte _port)
 {
@@ -124,7 +124,7 @@ void set_Led_OFF_9685(byte _addr, byte _port)
 	Wire.write(0);
 	Wire.write(0b10000);
 	Wire.endTransmission();
-	Serial.println("DOWN+");
+	//Serial.println("DOWN+");
 }
 
 //Записываем в плату углы сервомоторов с 0 по 8 в левую с 9 по 17 в правую

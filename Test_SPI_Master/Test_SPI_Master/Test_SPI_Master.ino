@@ -5,13 +5,12 @@
 */
 #include <SPI.h>
 #include <Arduino.h>
+#include "Kinematika.h"
 #include "Dop.h"
 
 #define SS_PIN_1 8
 #define SS_PIN_2 9
 
-
-// the setup function runs once when you press reset or power the board
 void setup()
 {
 	Serial.begin(115200);
@@ -20,29 +19,15 @@ void setup()
 	SerialUSB.println(" START SetUp !!! ");
 	SerialUSB.println(" -------------------------------------------------");
 
+	Timer_Init();     // Таймер 1 на  милисекунд по совпадению А
+
+
 	SPI.begin();
 	SPI.setDataMode(SPI_MODE3);
 	SPI.setBitOrder(MSBFIRST);
 	SPI.setClockDivider(SPI_CLOCK_DIV8);  // чтение SPI_CLOCK_DIV2 делитель 2 к частоте адруино 16 = 8 Мгерц
 
-	pinMode(8, OUTPUT);
-	digitalWrite(8, HIGH);
-	pinMode(9, OUTPUT);
-	digitalWrite(9, HIGH);
-
-	pinMode(10, OUTPUT);
-	digitalWrite(10, HIGH);
-
-
-	pinMode(32, OUTPUT);
-	digitalWrite(32, HIGH);
-	pinMode(33, OUTPUT);
-	digitalWrite(33, HIGH);
-	pinMode(34, OUTPUT);
-	digitalWrite(34, HIGH);
-	pinMode(35, OUTPUT);
-	digitalWrite(35, LOW);
-
+	set_PIN();   // Устанавливаем и обьявляем пины. для вывода анализатора и всего прочего
 
 	data_size = sizeof(myRemoteXY);   // Запоминаем размер структуры
 	SerialUSB.print(" data_size= ");
@@ -51,99 +36,78 @@ void setup()
 	//WriteByte_SPI(10, 0x1A, 0x1B);
 	//Serial.println(" Send data... ");
 	//
-	//delay(99999);
-	for (byte i = 0; i < size_servo; i++)
-	{
-		Data_Angle[i] = 135;
-	}
+	Set_Start_Position();	   // Ноги в начальную позицию
+	mode_work = 2;
 
-	Data_Angle[0] = 135;
-	Data_Angle[1] = 210;
-	Data_Angle[2] = 10;
+	//SerialUSB.print(" MAX_ANGLE= ");SerialUSB.println(MAX_ANGLE);
 
-	Data_Angle[3] = 135;
-	Data_Angle[4] = 210;
-	Data_Angle[5] = 10;
-	
-	Data_Angle[6] = 135;
-	Data_Angle[7] = 210;
-	Data_Angle[8] = 10;
-	//
-	Data_Angle[9] = 135;
-	Data_Angle[10] = 210;
-	Data_Angle[11] = 10;
-	//
-	Data_Angle[12] = 135;
-	Data_Angle[13] = 210;
-	Data_Angle[14] = 10;
-	
-	Data_Angle[15] = 135;
-	Data_Angle[16] = 210;
-	Data_Angle[17] = 10;
+
+	delay(1000);
 }
-
-
-// the loop function runs over and over again until power down or reset
+int8_t napr = 1;
 
 void loop() 
 {
 	while (true)
 	{
-
-
-		//SerialUSB.print(" millis... ");
-		//SerialUSB.println(millis());
-
-		long a = micros();
-		SendData_in_Driver(SS_PIN_1, Data_Angle);
-		delay(1);
-		ReadData_from_Communication(SS_PIN_2, &myRemoteXY);
-		//WriteByte_SPI(9, 77);
-		long b = micros();
-		//SerialUSB.print(" Send data... "); SerialUSB.print(millis());
-
-		for (byte i = 0; i < 12; i++)
+		if (flag_readData)		   //Каждые 10 милисекунд опрашиваем плату управления если надо и посылаем данные в драйвер
 		{
-			//Serial.println(buf[i],HEX);
-		}
-		for (byte i = 0; i < 6; i++)
+			flag_readData = false;
+			ReadData_from_Communication(SS_PIN_2, &myRemoteXY);	  //Отправляем запрос и получаем данные с платы коммуникации.
+			//mode_work = myRemoteXY.Position;					  // Смотрим в каком режиме нужно работать
+			delay(1);
+			SerialUSB.print(" mode= ");SerialUSB.print(mode_work);
+			switch (mode_work)
+			{
+			case 0:				  // 0 - установка в начальное положение
+				{
+					Set_Start_Position();	   // Ноги в начальную позицию
+				}
+				break;
+			case 1:				  // 1 - ручное управление серомотрами для теста что все работает
+				{
+					Manual_control();		 // Преобразуем данные в углы и задаем пределы движения сервомоторов
+				}
+				break;
+			case 2:				 // 2 - управление командами на движение
+				{
+				float speed_a = 0.05;  //Скорость движения
+				float angle_a = 0;  // Угол отклонения от прямо  в градусах направление движения
+				int num_leg = 1;
+				Body.Leg[num_leg].angle_A += get_angle_for_speed(speed_a, angle_a) * napr;
+				Body.Leg[0].angle_A = Body.Leg[num_leg].angle_A+45;
+				Body.Leg[2].angle_A = Body.Leg[num_leg].angle_A-45;
+
+				Body.Leg[3].angle_A = 270 - Body.Leg[0].angle_A;
+				Body.Leg[4].angle_A = 270 - Body.Leg[num_leg].angle_A;
+				Body.Leg[5].angle_A = 270 - Body.Leg[2].angle_A;
+				//Body.Leg[num_leg].angle_C += get_angle_for_speed(speed_a, angle_a) * napr;
+				//Body.Leg[4].angle_B += get_angle_for_speed(speed_a, angle_a) * napr;
+
+				SerialUSB.print(" step_angl= "); SerialUSB.print(get_angle_for_speed(speed_a, angle_a));
+				SerialUSB.print(" angl= ");SerialUSB.print(Body.Leg[4].angle_A);
+				float max_angle = get_max_angle(angle_a);
+				SerialUSB.print(" MAX angl= ");SerialUSB.println(max_angle);
+
+				if (Body.Leg[num_leg].angle_A > (135 + max_angle))
+					{
+						napr = -1;
+					}
+					if (Body.Leg[num_leg].angle_A < (135 - max_angle))
+					{
+						napr = 1;
+					}
+					setAngleForSend();		 //  Переписываем углы в массив для передачи
+				}
+				break;
+			}
+			SendData_in_Driver(SS_PIN_1, Data_Angle);			 // Отправляем команды драйверу низкого уровня поставить сервомоторы в заданное положение
+	}
+		if (flag_printData)		 //ВЫводим на печать каждые 100 милисекунд
 		{
-			//Serial.println(Data_Carent[i]);
+			flag_printData = false;
+			//printDataRemoteXY();
 		}
-		//Serial.print(" "); Serial.print(myRemoteXY.connect_flag);
-		//Serial.print(" ");Serial.print(myRemoteXY.Position);
 
-		SerialUSB.print(" ");SerialUSB.print(myRemoteXY.Servo_0);
-		SerialUSB.print(" ");SerialUSB.print(myRemoteXY.Servo_1);
-		SerialUSB.print(" ");SerialUSB.println(myRemoteXY.Servo_2);
-
-		Data_Angle[0] = map(myRemoteXY.Servo_0 + 100, 0, 200, 50, 220);
-		Data_Angle[3] = map(myRemoteXY.Servo_0 + 100, 0, 200, 50, 220);
-		Data_Angle[6] = map(myRemoteXY.Servo_0 + 100, 0, 200, 50, 220);
-		Data_Angle[9] = map(myRemoteXY.Servo_0 + 100, 0, 200, 50, 220);
-		Data_Angle[12] = map(myRemoteXY.Servo_0 + 100, 0, 200, 50, 220);
-		Data_Angle[15] = map(myRemoteXY.Servo_0 + 100, 0, 200, 50, 220);
-
-		Data_Angle[1] = map(myRemoteXY.Servo_1 + 100, 0, 200, 50, 220);
-		Data_Angle[4] = map(myRemoteXY.Servo_1 + 100, 0, 200, 50, 220);
-		Data_Angle[7] = map(myRemoteXY.Servo_1 + 100, 0, 200, 50, 220);
-		Data_Angle[10] = map(myRemoteXY.Servo_1 + 100, 0, 200, 50, 220);
-		Data_Angle[13] = map(myRemoteXY.Servo_1 + 100, 0, 200, 50, 220);
-		Data_Angle[16] = map(myRemoteXY.Servo_1 + 100, 0, 200, 50, 220);
-
-		Data_Angle[2] = map(myRemoteXY.Servo_2 + 100, 0, 200, 50, 220);
-		Data_Angle[5] = map(myRemoteXY.Servo_2 + 100, 0, 200, 50, 220);
-		Data_Angle[8] = map(myRemoteXY.Servo_2 + 100, 0, 200, 50, 220);
-		Data_Angle[11] = map(myRemoteXY.Servo_2 + 100, 0, 200, 50, 220);
-		Data_Angle[14] = map(myRemoteXY.Servo_2 + 100, 0, 200, 50, 220);
-		Data_Angle[17] = map(myRemoteXY.Servo_2 + 100, 0, 200, 50, 220);
-
-
-		//SerialUSB.print(" Data_Angle0... ");SerialUSB.println(Data_Angle[0]);
-		//SerialUSB.print(" Data_Angle1... ");SerialUSB.println(Data_Angle[1]);
-		//SerialUSB.print(" Data_Angle2... ");SerialUSB.println(Data_Angle[2]);
-
-
-		delay(100);
 	}
 }
