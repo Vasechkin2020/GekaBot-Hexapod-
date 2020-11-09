@@ -20,31 +20,48 @@ void setup()
 	Wire.setClock(1000000); // скорость передачи данных 1000 кБит/с.
 	//I2C_test();
 
+	Reset_All_9685();
 	Init_PCA9685(PCA9685_LEFT_ADDRESS);
 	Init_PCA9685(PCA9685_RIGHT_ADDRESS);
 
 	I2C_test();
+	delay(1000);
 
 	Init_ServoMotor();
 	Set_StartPositionServoMotor();
 	
 	Init_SPI_slave();	 // Настраиваем SPI slave и включаем прерывание
 
-	Data_Carent[0] = 80;
-	Data_Carent[1] = 110;
-	Data_Carent[2] = 90;
-	Data_Carent[3] = 120;
-	Data_Carent[4] = 100;
-	Data_Carent[5] = 333;
-	delay(5000);
+	//Data_Carent[0] = 80;
+	//Data_Carent[1] = 110;
+	//Data_Carent[2] = 90;
+	//Data_Carent[3] = 120;
+	//Data_Carent[4] = 100;
+	//Data_Carent[5] = 333;
+	//delay(5000);
 
 
 	//Init_219(INA219_ADDRESS);
 
 
-	//set_Angle_9685(PCA9685_LEFT_ADDRESS, 13, 0);
+	//set_Angle2_9685(PCA9685_LEFT_ADDRESS, 13, 0);
 	//set_Angle_9685(PCA9685_LEFT_ADDRESS, 14, 2);
-	//set_Angle_9685(PCA9685_LEFT_ADDRESS, 15, 0);
+
+		//set_Led_9685(PCA9685_LEFT_ADDRESS, 15, 1);
+		for (byte i = 0; i < 100; i++)
+	{
+			set_Led_ON_9685(PCA9685_LEFT_ADDRESS, 15);
+			delay(100);
+			set_Led_OFF_9685(PCA9685_LEFT_ADDRESS, 15);
+			delay(100);
+		}
+	//delay(3000);
+	//set_Led_9685(PCA9685_LEFT_ADDRESS, 15, 1);
+	//Serial.println("UP");
+	//delay(3000);
+
+
+	delay(999999999);
 
 	//set_Angle_9685(PCA9685_RIGHT_ADDRESS, 13, 135);
 	//set_Angle_9685(PCA9685_RIGHT_ADDRESS, 14, 200);

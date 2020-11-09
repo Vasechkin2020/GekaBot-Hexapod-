@@ -19,6 +19,9 @@
 
 #define PCA9685_ALLLED_ON_L 0xFA  /**< load all the LEDn_ON registers, 0 */
 #define PCA9685_ALLLED_ON_H 0xFB  /**< load all the LEDn_ON registers, high */
+
+#define PCA9685_SW_RESET   (byte)0x06          // Sent to address 0x00 to reset all devices on Wire line
+
 //структра с данными по сервомотрам содержит угол и напрвление вращения
 struct servo_stru
 {
@@ -29,11 +32,20 @@ int Servo_angle[numServo];  //Массив для хранения углов с
 byte Servo_napravl[numServo];  //Массив для хранения направлений вращения сервомоторов 
 
 //Перезагрузка в значения по умолчанию Отключаются субадреса
-void reset9685(uint8_t _addr)  
+void Reset_All_9685()
+{
+	Wire.beginTransmission(0x00);
+	Wire.write(PCA9685_SW_RESET);
+	Wire.endTransmission();	
+	delay(1);
+}
+
+void restart9685(uint8_t _addr)
 {
 	writeByte_i2c(_addr, PCA9685_MODE1, MODE1_RESTART);
 	delay(10);
 }
+
 //Установка частоты передачи данных в сервомотры до 300Герц для цифровых и 50 для аналоговых
 void setPWMFreq9685(uint8_t _addr, float _freq) 
 {
@@ -57,7 +69,7 @@ void Init_PCA9685(byte _adrr)
 {
 	Serial.print("Start Init PCA9685... 0x");
 	Serial.print(_adrr, HEX);
-	reset9685(_adrr);								   //Начальный сброс
+	restart9685(_adrr);								   //Начальный сброс
 	setPWMFreq9685(_adrr, SERVO_FREQ);				   //Устанавливаем частоту 50 для аналоговых или 100 герц для цифровых
 	writeByte_i2c(_adrr, PCA9685_ALLLED_ON_L, 0);	   // Во все регистры начальные такта пишем ноль.  Чтобы потом не надо было каждый раз передавать 
 	writeByte_i2c(_adrr, PCA9685_ALLLED_ON_H, 0);	   // Во все регистры начальные такта пишем ноль.
@@ -80,22 +92,29 @@ void set_Angle_9685(byte _addr, byte _port, int _angle)
 	Wire.endTransmission();
 	//Wire.setClock(400000); // скорость передачи данных 400 кБит/с.
 }
-
-void set_LED_9685(byte _addr, byte _port, int _value)
+void set_Led_ON_9685(byte _addr, byte _port)
 {
-	byte on = 0;
-	Serial.print("_value= "); Serial.println(_value);
-
-	//Wire.setClock(1000000); // скорость передачи данных 1000 кБит/с.
 	Wire.beginTransmission(_addr);
-	Wire.write(0x08 + 4 * _port);  //Начинаем с регистра OFF и с шагом 4 байта на каждый порт
-	//Wire.write(on);				//Начальные регистра не пишем, так как написали сразу при инициализации.
-	//Wire.write(on >> 8);
-	Wire.write(_value);
-	Wire.write(_value >> 8);
+	Wire.write(0x06 + 4 * _port);  //Начинаем с регистра  и с шагом 4 байта на каждый порт
+	Wire.write(0);
+	Wire.write(0b10000);
+	Wire.write(0);
+	Wire.write(0);
 	Wire.endTransmission();
-	//Wire.setClock(400000); // скорость передачи данных 400 кБит/с.
+	Serial.println("UP+");
 }
+void set_Led_OFF_9685(byte _addr, byte _port)
+{
+	Wire.beginTransmission(_addr);
+	Wire.write(0x06 + 4 * _port);  //Начинаем с регистра  и с шагом 4 байта на каждый порт
+	Wire.write(0);
+	Wire.write(0);
+	Wire.write(0);
+	Wire.write(0b10000);
+	Wire.endTransmission();
+	Serial.println("DOWN+");
+}
+
 //Записываем в плату углы сервомоторов с 0 по 8 в левую с 9 по 17 в правую
 void writeAngle_to_PCA9685()		
 {
