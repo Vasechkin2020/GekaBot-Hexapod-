@@ -1,4 +1,5 @@
 
+#define Addr_TCA9548A 0x77      // Адреc платы мультиплексора шины I2C
 
 void I2C_test()
 {
@@ -145,7 +146,7 @@ ISR(TIMER1_COMPA_vect)         // Обработчик прерывания та
  		flag_9685 = true;
 		count_9685 = 0;
 	}
-	if (count_219 >= 5)
+	if (count_219 >= 20)
 	{
 		flag_ina219 = true;
 		count_219 = 0;
@@ -174,7 +175,9 @@ const byte size_servo = 18;
 const byte size_data = size_servo * 2;	 // 18*2=36 байт данных и один контрольная сумма
 volatile byte buffer[size_data];
 volatile byte buffer2[size_data];
-int Data_Carent[6];         // Значения датчика тока
+
+#define COUNT_INA219 6 // Число установленных датчиков 
+int Data_Carent[COUNT_INA219];         // Значения датчика тока
 byte chek_sum_carent = 0;
 
 
@@ -238,7 +241,7 @@ ISR(SPI_STC_vect)
 					buffer2[i] = buffer[i];
 				}
 				Data_Angle = (int*)(&buffer2);// Берем адрес массива(1 байт) и преврщаем его в адрес int (2 байта) и записываем его в переменную с адресом начала массива
-				flag_data = 1;				//Включаем обработку в лупе	Если данные хорошие и прошлые уже обработаны
+				flag_data = true;				//Включаем обработку в лупе	Если данные хорошие и прошлые уже обработаны
 			}
 		}
 		else
@@ -265,37 +268,16 @@ ISR(SPI_STC_vect)
 }
 
 
-
-//if (flag_ina219 == true)	   //По таймеру опрашиваем датчики тока 
-//{
-//	long a = micros();
-//	flag_ina219 = false;	
-//	//Serial.println(millis());
-//	//Serial.print("readBusVoltage= ");
-//	//Serial.print(millis()); Serial.print(" ");
-
-//	//Serial.print(readBusVoltage(), 4); Serial.print(" ");
-
-//	////Serial.print("readShuntVoltage= ");
-//	////Serial.print(readShuntVoltage(), 4);  Serial.print(" ");
-
-//	//Serial.print("readShuntCurrent= ");
-//	float Current = readShuntCurrent();
-//	if (Current < 4)
-//	{
-//		Serial.print(Current, 4);  Serial.println(" ");
-//	}
-
-//	//Serial.print("readBusPower= ");
-//	//Serial.println(readBusPower(), 4);
+void set_TCA9548A(uint8_t bus)
+{
+	if (bus > 7) return;
+	Wire.beginTransmission(Addr_TCA9548A); // TCA9548A адрес 0x70  or 0x77
+	Wire.write(1 << bus); // отправляем байт на выбранную шину
+	Wire.endTransmission();
+}
 
 
-//	//Serial.print("timer = ");
-//	long b = micros();
 
-//	//Serial.println(b - a);
-
-//}
 /*
 if (flag_gradus == true)
 {
@@ -327,19 +309,7 @@ if (flag_gradus == true)
 
 
   ////set_all_servo_angle(90);
-  //if (millis() - time_p1 > 2000)  // раз в секунду
-  //{
-  //	if (flag_napravlen == 0)
-  //	{
-  //		set_all_servo_angle(10);
-  //		flag_napravlen = 1;
-  //	}
-  //	else
-  //	{
-  //		set_all_servo_angle(260);
-  //		flag_napravlen = 0;
-  //	}
-  //	time_p1 = millis();
+
   //	//Serial.print("flag_napravlen = ");
   //	//Serial.println(flag_napravlen);
 

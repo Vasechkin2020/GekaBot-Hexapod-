@@ -6,7 +6,7 @@
 #define SERVO_TAKT ((float)1000000/SERVO_FREQ/4096.0) // кол-во микросекунд которое требуется подавать сигнал на 1 имульс драйвера. Зависит от частоты сигнала и разрешающей способности платы управления
 // или сколько микросекунд в одном такте платы . И если нам надо подать управляющий сигнал в 1500 микросекунд то надо 1500/	SERVO_TAKT 
 
-#define PCA9685_LEFT_ADDRESS  0x40      /**< Default PCA9685 I2C Slave Address */
+#define PCA9685_LEFT_ADDRESS  0x43      /**< Default PCA9685 I2C Slave Address */
 #define PCA9685_RIGHT_ADDRESS 0x41      /**<  PCA9685 I2C Slave Address */
 
 #define PCA9685_MODE1 0x00      /**< Mode Register 1 */
@@ -23,13 +23,25 @@
 #define PCA9685_SW_RESET   (byte)0x06          // Sent to address 0x00 to reset all devices on Wire line
 
 //структра с данными по сервомотрам содержит угол и напрвление вращения
-struct servo_stru
+struct stru_Config_servo
 {
 	int angle;   	// угол уставновки сервы
 	char napravl;  // Направление (Особенность) установки мотора подбирается по факту сборки и заноситься в начале при инициализации
+	byte port;       // На каком порту платы находится мотор
 };
-int Servo_angle[numServo];  //Массив для хранения углов сервомоторов 
-byte Servo_napravl[numServo];  //Массив для хранения направлений вращения сервомоторов 
+
+struct stru_Config_lapa
+{
+	float current;    //Значение тока
+	float BusVoltage;
+	float BusPower;
+	byte port;		  // Порт мультиплексора к которому подключеная лапа
+};
+
+stru_Config_servo Servo[numServo];  //Массив для хранения всех данных по серво  
+stru_Config_lapa Lapa[COUNT_INA219];   //Массив для хранения  данных по току на лапе
+//int Servo_angle[numServo];  //Массив для хранения углов сервомоторов 
+//byte Servo_napravl[numServo];  //Массив для хранения направлений вращения сервомоторов 
 
 //Перезагрузка в значения по умолчанию Отключаются субадреса
 void Reset_All_9685()
@@ -122,13 +134,13 @@ void writeAngle_to_PCA9685()
 	{
 		if (i >= 0 && i <= 8)
 		{
-			set_Angle_9685(PCA9685_LEFT_ADDRESS, i, Servo_angle[i]);
+			set_Angle_9685(PCA9685_LEFT_ADDRESS, Servo[i].port, Servo[i].angle);	 //Пишем в зависимости он того к какому порту мотор подключен и на какую плату
 			//Serial.print("i= "); Serial.print(i);
 			//Serial.print(" angle= "); Serial.println(Servo[i].angle);
 		}
 		if (i >= 9 && i <= 17)
 		{
-			set_Angle_9685(PCA9685_RIGHT_ADDRESS, (i - 9), Servo_angle[i]);
+			set_Angle_9685(PCA9685_RIGHT_ADDRESS, Servo[i - 9].port, Servo[i].angle);//Пишем в зависимости он того к какому порту мотор подключен и на какую плату
 			//Serial.print("ir= "); Serial.print(i-9);
 			//Serial.print(" angle= "); Serial.println(Servo[i].angle);
 		}
@@ -140,13 +152,13 @@ void set_all_servo_angle(int _angle)
 {
 	for (byte i = 0; i < numServo; i++)
 	{
-		if (Servo_napravl[i] == 1)
+		if (Servo[i].napravl == 1)
 		{
-			Servo_angle[i] = _angle;
+			Servo[i].angle = _angle;
 		}
 		else
 		{
-			Servo_angle[i] = 270 - _angle;
+			Servo[i].angle = 270 - _angle;
 		}
 	}
 }
@@ -154,49 +166,84 @@ void set_group_servo_angle (byte _num, int _angle)
 {
 	for (byte i = _num; i < numServo; i = i+3)
 	{
-		if (Servo_napravl[i] == 1)
+		if (Servo[i].napravl == 1)
 		{
-			Servo_angle[i] = _angle;
+			Servo[i].angle = _angle;
 		}
 		else
 		{
-			Servo_angle[i] = 270 - _angle;
+			Servo[i].angle = 270 - _angle;
 		}
 	}
 }
 void set_num_servo_angle(byte _num, int _angle)
 {
-		if (Servo_napravl[_num] == 1)
+		if (Servo[_num].napravl == 1)
 		{
-			Servo_angle[_num] = _angle;
+			Servo[_num].angle = _angle;
 		}
 		else
 		{
-			Servo_angle[_num] = 270 - _angle;
+			Servo[_num].angle = 270 - _angle;
 		}
 }
 
 //Начальная установка напрвлений вращений моторов в зависимости как собрали макет
 void Init_ServoMotor()
 {
-	Servo_napravl[0] = -1;
-	Servo_napravl[1] = -1;
-	Servo_napravl[2] = 1;
-	Servo_napravl[3] = -1;
-	Servo_napravl[4] = -1;
-	Servo_napravl[5] = 1;
-	Servo_napravl[6] = -1;
-	Servo_napravl[7] = -1;
-	Servo_napravl[8] = 1;
-	Servo_napravl[9] = -1;
-	Servo_napravl[10] = -1;
-	Servo_napravl[11] = 1;
-	Servo_napravl[12] = -1;
-	Servo_napravl[13] = -1;
-	Servo_napravl[14] = 1;
-	Servo_napravl[15] = -1;
-	Servo_napravl[16] = -1;
-	Servo_napravl[17] = 1;
+	Servo[0].napravl = -1;
+	Servo[0].port = 6;
+
+	Servo[1].napravl = -1;
+	Servo[1].port = 0;
+
+	Servo[2].napravl = 1;
+	Servo[2].port = 1;
+	
+	Servo[3].napravl = -1;
+	Servo[3].port = 7;
+	
+	Servo[4].napravl = -1;
+	Servo[4].port = 2;
+
+	Servo[5].napravl = 1;
+	Servo[5].port = 3;
+
+	Servo[6].napravl = -1;
+	Servo[6].port = 8;
+
+	Servo[7].napravl = -1;
+	Servo[7].port = 4;
+
+	Servo[8].napravl = 1;
+	Servo[8].port = 5;
+
+	Servo[9].napravl = -1;
+	Servo[9].port = 6;
+
+	Servo[10].napravl = -1;
+	Servo[10].port = 0;
+
+	Servo[11].napravl = 1;
+	Servo[11].port = 1;
+
+	Servo[12].napravl = -1;
+	Servo[12].port = 7;
+
+	Servo[13].napravl = -1;
+	Servo[13].port = 2;
+
+	Servo[14].napravl = 1;
+	Servo[14].port = 3;
+
+	Servo[15].napravl = -1;
+	Servo[15].port = 8;
+
+	Servo[16].napravl = -1;
+	Servo[16].port = 4;
+
+	Servo[17].napravl = 1;
+	Servo[18].port = 5;
 	
 }
 //Установка ног в начальную безопасную позицию
@@ -204,7 +251,7 @@ void Set_StartPositionServoMotor()
 {
 	//set_all_servo_angle(180);
 	set_group_servo_angle(0, 135);
-	set_group_servo_angle(1, 240);
+	set_group_servo_angle(1, 180);
 	set_group_servo_angle(2, 210);
 	writeAngle_to_PCA9685();          // Запись в  плату 
 }
@@ -212,11 +259,21 @@ void Set_StartPositionServoMotor()
 void loop_writeAngle_to_PCA9685()
 {
 	//long a = micros();
-	flag_9685 = false;
 	writeAngle_to_PCA9685();
 	//setAngle_to_ServoRight();
 	//long b = micros();
 	//Serial.println(b - a);
 	//Serial.print("timer = ");
 	//Serial.println(millis());
+}
+
+void Init_Lapa()
+{
+	Lapa[0].port = 3;
+	Lapa[1].port = 4;	
+	Lapa[2].port = 5;
+
+	Lapa[3].port = 2;
+	Lapa[4].port = 0;
+	Lapa[5].port = 1;
 }

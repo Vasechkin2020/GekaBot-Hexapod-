@@ -1,5 +1,5 @@
 /** default I2C address **/
-#define INA219_ADDRESS (0x44) // Запаяно А1
+#define INA219_ADDRESS (0x40) // Запаяно А1
  
 #define INA219_REG_CONFIG (0x00)	/** config register address **/
 #define INA219_REG_SHUNTVOLTAGE (0x01)	/** shunt voltage register **/
@@ -81,8 +81,8 @@ bool calibrate(float rShuntValue, float iMaxExpected)
 
 	uint16_t calibrationValue = (uint16_t)((0.04096) / (currentLSB * rShuntValue));
 
-	Serial.print("calibrationValue= ");
-	Serial.println(calibrationValue, 4);
+	//Serial.print("calibrationValue= ");
+	//Serial.println(calibrationValue, 4);
 
 	writeInt_i2c(INA219_ADDRESS, INA219_REG_CALIBRATION, calibrationValue);
 
@@ -118,7 +118,7 @@ void Init_219(byte _adrr)
 	Serial.print("Start Init INA219... 0x");	Serial.println(_adrr,HEX);
 
 	reset219(_adrr);								   //Начальный сброс
-	Serial.print("Gonfig registr start "); Serial.println(readInt_I2C(INA219_ADDRESS, INA219_REG_CONFIG), BIN);
+	//Serial.print("Gonfig registr start "); Serial.println(readInt_I2C(INA219_ADDRESS, INA219_REG_CONFIG), BIN);
 
 	uint16_t config = 0;
 	config = (INA219_CONFIG_BVOLTAGERANGE_16V |		 //BRNG (bus voltage range) – диапазон измерения шины; 	16 или 32 вольта
@@ -129,27 +129,44 @@ void Init_219(byte _adrr)
 	//Serial.print("config= "); Serial.println(config, BIN);
 	writeInt_i2c(INA219_ADDRESS, INA219_REG_CONFIG, config);
 
-	Serial.print("Gonfig registr new "); Serial.println(readInt_I2C(INA219_ADDRESS, INA219_REG_CONFIG), BIN);
+	//Serial.print("Gonfig registr new "); Serial.println(readInt_I2C(INA219_ADDRESS, INA219_REG_CONFIG), BIN);
 
 	calibrate(0.1, 3.2);     // Колибровка со значениями шунта и максимального тока какой может быть	 0,1 Ом и 3 Ампера
-
+	
+	Serial.println("---");
+	
 	Serial.print("readBusVoltage= ");
 	Serial.println(readBusVoltage(),4);
 
-	Serial.print("readShuntVoltage= ");
-	Serial.println(readShuntVoltage(),4);
+	//Serial.print("readShuntVoltage= ");
+	//Serial.println(readShuntVoltage(),4);
 
 	Serial.print("readShuntCurrent= ");
 	Serial.println(readShuntCurrent(), 4);
 
-	Serial.print("readBusPower= ");
-	Serial.println(readBusPower(), 4);	
-	
+	//Serial.print("readBusPower= ");
+	//Serial.println(readBusPower(), 4);	
+	Serial.println("---");
 	
 	Serial.println("End Init INA219");
 
 
 
+
+}
+
+void Init_All_INA219()
+{
+	for (byte i = 0; i < COUNT_INA219; i++)
+	{
+		Serial.print("Init_All_INA219 i= ");
+		Serial.println(i);
+		set_TCA9548A(i);
+		Init_219(INA219_ADDRESS);
+		//I2C_test();
+	//delay(1000);
+
+	}
 
 }
 
