@@ -24,5 +24,8 @@
     <ClInclude Include="__vm\.Test_SPI_Master.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Dop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

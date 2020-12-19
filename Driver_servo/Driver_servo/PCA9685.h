@@ -191,6 +191,8 @@ void set_num_servo_angle(byte _num, int _angle)
 //Начальная установка напрвлений вращений моторов в зависимости как собрали макет
 void Init_ServoMotor()
 {
+	// Из-за того что от датчиков тока я дорожки протянул не совсем правильно. Нужно сначала подключить средний и дальний моторы всх 3 ног и только потом три ближних мотора
+	//Первая сторона
 	Servo[0].napravl = -1;
 	Servo[0].port = 6;
 
@@ -217,6 +219,8 @@ void Init_ServoMotor()
 
 	Servo[8].napravl = 1;
 	Servo[8].port = 5;
+
+	//Вторая сторона
 
 	Servo[9].napravl = -1;
 	Servo[9].port = 6;
@@ -246,13 +250,24 @@ void Init_ServoMotor()
 	Servo[18].port = 5;
 	
 }
+void Init_Lapa()		 // Тут определяем на каким портам мультиплексора соответствуют датчики INA219
+{
+	Lapa[0].port = 3;
+	Lapa[1].port = 4;	
+	Lapa[2].port = 5;
+
+	Lapa[3].port = 2;
+	Lapa[4].port = 0;
+	Lapa[5].port = 1;
+}
+
 //Установка ног в начальную безопасную позицию
 void Set_StartPositionServoMotor()
 {
 	//set_all_servo_angle(180);
 	set_group_servo_angle(0, 135);
-	set_group_servo_angle(1, 180);
-	set_group_servo_angle(2, 210);
+	set_group_servo_angle(1, 210);
+	set_group_servo_angle(2, 10);
 	writeAngle_to_PCA9685();          // Запись в  плату 
 }
 //Функция из лупа по тайменру каждые 10 милисекунд записывает данные в контроллеры					 
@@ -267,13 +282,3 @@ void loop_writeAngle_to_PCA9685()
 	//Serial.println(millis());
 }
 
-void Init_Lapa()
-{
-	Lapa[0].port = 3;
-	Lapa[1].port = 4;	
-	Lapa[2].port = 5;
-
-	Lapa[3].port = 2;
-	Lapa[4].port = 0;
-	Lapa[5].port = 1;
-}

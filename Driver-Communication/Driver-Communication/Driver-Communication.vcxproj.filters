@@ -24,9 +24,6 @@
     <ClInclude Include="__vm\.Driver-Communication.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Remote_XY.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="slave_SPI.h">
       <Filter>Header Files</Filter>
     </ClInclude>

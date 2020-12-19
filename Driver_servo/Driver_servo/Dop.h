@@ -159,11 +159,21 @@ ISR(TIMER1_COMPA_vect)         // Обработчик прерывания та
 
 }
 
+#include <SPI.h>
+
 // Настраиваем шину SPI как slave и включаем прерывние по пришедшему байту
 void Init_SPI_slave()
 {
+	SPI.setDataMode(SPI_MODE3);
+	SPI.setBitOrder(MSBFIRST);
+	//SPI.setClockDivider(SPI_CLOCK_DIV4);  // чтение SPI_CLOCK_DIV2 делитель 2 к частоте адруино 16 = 8 Мгерц
+
 	// have to send on master in, *slave out*
 	pinMode(MISO, OUTPUT);
+	// have to send on master in, *slave out*
+	//pinMode(MOSI, INPUT);
+
+	//pinMode(SS, INPUT_PULLUP);  // Чип селект на вход сигнала
 	// turn on SPI in slave mode
 	SPCR |= 1 << (SPE);
 	// turn on interrupts
@@ -187,15 +197,23 @@ volatile byte data = 0;
 volatile byte flag_data = 0;
 volatile byte chek_sum = 0;   // Байт контрольной суммы
 
+bool flag_goodCommand;
+bool flag_bedCommand;
+bool flag_goodData;
+bool flag_bedData;
+
 
 // SPI interrupt routine Прерывание по пришедшему байту
 ISR(SPI_STC_vect)
 {
+	digitalWrite(7, HIGH);
 	data = SPDR;
+	SPDR = 0b10011001;	   //Для отладки пишем и посылаем всегда 153, если данные передаются то это число заменяется на данные
+
 	//Serial.print("0 ");
 	//Serial.print(count);
 	//Serial.print(" ");
-	//Serial.println(data, HEX);
+	//Serial.println(data);
 		//Serial.println(count);
 	switch (count)
 	{
@@ -205,6 +223,7 @@ ISR(SPI_STC_vect)
 			{
 				count++;                     // Увеличиваем счетчик, что значит что пришел первый байт
 				//SPDR = flag_data;        // Записываем в регистр для передачи статус обработки . Успели ли обработать предыдущую партию
+				digitalWrite(7, LOW);
 				return;
 			}
 		}
@@ -213,12 +232,16 @@ ISR(SPI_STC_vect)
 			if (data == 0x1B) // Сюда когда был приняьт первый байт и пришел второй правильный
 			{
 				count++;                     // Увеличиваем счетчик, что значит что пришел второй байт
+				flag_goodCommand = true;
+				digitalWrite(7, LOW);
 				return;
 			}
 			else
 			{
 				count = 0;                         // Пришел второй байт не правильный. сбрасываем счетчик и начинаем все сначала
-				Serial.println("Error");
+				flag_bedCommand = true;
+				//Serial.println("Error");
+				digitalWrite(7, LOW);
 				return;
 			}
 		}
@@ -233,24 +256,30 @@ ISR(SPI_STC_vect)
 		if (chek_sum == data)		// Если наша чек сумма совпадает с последним байтом где чексума переданных данных 
 		{
 			//Serial.println("chek_sum Ok");
+			flag_goodData = true;
 
 			if (flag_data == 0)    //Если уже успели обработали предыдущие данные в лупе
 			{
-				for (byte i = 0; i < size_data; i++)
-				{
-					buffer2[i] = buffer[i];
-				}
-				Data_Angle = (int*)(&buffer2);// Берем адрес массива(1 байт) и преврщаем его в адрес int (2 байта) и записываем его в переменную с адресом начала массива
+				//for (byte i = 0; i < size_data; i++)
+				//{
+				//	buffer2[i] = buffer[i];
+				//}
+				Data_Angle = (int*)(&buffer);// Берем адрес массива(1 байт) и преврщаем его в адрес int (2 байта) и записываем его в переменную с адресом начала массива
 				flag_data = true;				//Включаем обработку в лупе	Если данные хорошие и прошлые уже обработаны
+				//Serial.print("chek_sum OK ");
+				//Serial.println(millis());
 			}
 		}
 		else
 		{
-			Serial.println("chek_sum BED");
+			flag_bedData = true;
+			//Serial.print("chek_sum BED");
+			//Serial.println(millis());
 		}
 
 		chek_sum = 0;
 		count = 0;             // Приняли все данные, начинаем ждать новый правильный байт
+		digitalWrite(7, LOW);
 		return;
 	}
 	if (count > 1 && count < 14)		// Передаем 12 байт
@@ -265,6 +294,7 @@ ISR(SPI_STC_vect)
 		chek_sum_carent = 0;
 	}	
 	count++;
+	digitalWrite(7, LOW);
 }
 
 
