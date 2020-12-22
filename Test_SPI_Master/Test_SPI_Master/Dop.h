@@ -167,9 +167,9 @@ void WriteByte_SPI(uint8_t CS_PIN, byte data)  // Указываем на каком пине устрой
 void Set_Start_Position()
 {
 
-	int a_0 = 135;			// Положение для ходьбы
-	int a_1 = 135;
-	int a_2 = 45;
+	//int a_0 = 135;			// Положение для ходьбы
+	//int a_1 = 180;
+	//int a_2 = 90;
 
 	int a_0 = 135;			// базовое положение, ноги в воздухе
 	int a_1 = 210;

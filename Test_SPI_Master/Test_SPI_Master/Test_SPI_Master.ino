@@ -56,7 +56,7 @@ void loop()
 			ReadData_from_Communication(SS_PIN_2, &myRemoteXY);	  //Отправляем запрос и получаем данные с платы коммуникации.
 			//mode_work = myRemoteXY.Position;					  // Смотрим в каком режиме нужно работать
 			delay(1);
-			SerialUSB.print(" mode= ");SerialUSB.print(mode_work);
+			SerialUSB.print(" mode= "); SerialUSB.print(mode_work);
 			switch (mode_work)
 			{
 			case 0:				  // 0 - установка в начальное положение
@@ -71,36 +71,43 @@ void loop()
 				break;
 			case 2:				 // 2 - управление командами на движение
 				{
-				float speed_a = 0.05;  //Скорость движения
-				float angle_a = 0;  // Угол отклонения от прямо  в градусах направление движения
-				int num_leg = 1;
-				Body.Leg[num_leg].angle_A += get_angle_for_speed(speed_a, angle_a) * napr;
-				Body.Leg[0].angle_A = Body.Leg[num_leg].angle_A+45;
-				Body.Leg[2].angle_A = Body.Leg[num_leg].angle_A-45;
-
-				Body.Leg[3].angle_A = 270 - Body.Leg[0].angle_A;
-				Body.Leg[4].angle_A = 270 - Body.Leg[num_leg].angle_A;
-				Body.Leg[5].angle_A = 270 - Body.Leg[2].angle_A;
-				//Body.Leg[num_leg].angle_C += get_angle_for_speed(speed_a, angle_a) * napr;
-				//Body.Leg[4].angle_B += get_angle_for_speed(speed_a, angle_a) * napr;
-
-				SerialUSB.print(" step_angl= "); SerialUSB.print(get_angle_for_speed(speed_a, angle_a));
-				SerialUSB.print(" angl= ");SerialUSB.print(Body.Leg[4].angle_A);
-				float max_angle = get_max_angle(angle_a);
-				SerialUSB.print(" MAX angl= ");SerialUSB.println(max_angle);
-
-				if (Body.Leg[num_leg].angle_A > (135 + max_angle))
+					//perviy_test();
+					byte granica_kupola = raschet_virt_leg(delta_X, delta_X);       // Расчитываем положение 6 точек виртуальной ноги
+					  // Перебираем все 6 ног и в зависимости от статуса ноги присваиваем точке опоры ноги нужную точку виртуальной ноги
+					for (byte i = 0; i < 6; i++)             
 					{
-						napr = -1;
+						if (Body.Leg[i].status == 0)      //Если Базовое положение то присваиваем точку 0
+						{
+							Body.Leg[i].prop.x = virt_Leg.point[0].x;
+							Body.Leg[i].prop.y = virt_Leg.point[0].y;
+							Body.Leg[i].prop.z = virt_Leg.point[0].z;
+						}
+						if (Body.Leg[i].status == 1)      //Если нога опорная то присваиваем точку 2
+						{
+							Body.Leg[i].prop.x = virt_Leg.point[2].x;
+							Body.Leg[i].prop.y = virt_Leg.point[2].y;
+							Body.Leg[i].prop.z = virt_Leg.point[2].z;
+						}
+						if (Body.Leg[i].status == 0)      //Если нога воздушная то присваиваем точку 3
+						{
+							Body.Leg[i].prop.x = virt_Leg.point[3].x;
+							Body.Leg[i].prop.y = virt_Leg.point[3].y;
+							Body.Leg[i].prop.z = virt_Leg.point[3].z;
+						}
 					}
-					if (Body.Leg[num_leg].angle_A < (135 - max_angle))
+					if (granica_kupola == 1)				// Если достигли границы купола то меняем статус ног с опорных на воздушние и наоборот и меняем точки 2 и 3 местами	 (фактически зеркалим точку 2 а точка 3 сама изменить в функции при следующем пересчете
 					{
-						napr = 1;
+						virt_Leg.point[2].x = -virt_Leg.point[2].x;
+						virt_Leg.point[2].y = -virt_Leg.point[2].y;
+						virt_Leg.point[2].z = -virt_Leg.point[2].z;
 					}
-					setAngleForSend();		 //  Переписываем углы в массив для передачи
+
+
+
+
+
 				}
 				break;
-			}
 			SendData_in_Driver(SS_PIN_1, Data_Angle);			 // Отправляем команды драйверу низкого уровня поставить сервомоторы в заданное положение
 	}
 		if (flag_printData)		 //ВЫводим на печать каждые 100 милисекунд
